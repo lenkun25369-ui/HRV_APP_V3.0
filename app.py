@@ -222,10 +222,12 @@ if token and obs_url:
                 height=300,
                 margin=dict(l=40, r=20, t=50, b=40),
                 xaxis=dict(
+                    range=[x_ds[0], x_ds[-1]],   # ⭐ 關鍵修正
                     rangeslider=dict(visible=True),
                     type="linear"
                 )
             )
+
 
             st.plotly_chart(fig, use_container_width=True)
 
