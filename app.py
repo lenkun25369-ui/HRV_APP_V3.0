@@ -246,8 +246,8 @@ if token and obs_url:
             st.markdown("**HRV Features Output**")
 
             row = hrv_df.iloc[0]
-            feature_names = list(row.index)
-            feature_values = row.values
+            feature_names = list(row.index)[:10]
+            feature_values = row.values[:10]
 
             if len(feature_names) != 10:
                 st.warning(f"Expected 10 HRV features, got {len(feature_names)}")
