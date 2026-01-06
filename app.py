@@ -253,14 +253,7 @@ if token and obs_url:
             )
 
         
-                # x 軸可拖拉 + range slider
-                xaxis=dict(
-                    range=[x_ds[0], x_ds[-1]],
-                    rangeslider=dict(visible=True),
-                    type="linear"
-                )
-            )
-        
+
             st.plotly_chart(fig, use_container_width=True)
         
         except Exception as e:
