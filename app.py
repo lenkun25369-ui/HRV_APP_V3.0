@@ -15,7 +15,8 @@ st.title("SHIELD")
 st.caption("HRV Sepsis Early Warning System Powerd by AI")
 
 risk_placeholder = st.empty()
-ecg_hrv_placeholder = st.empty() 
+ecg_hrv_placeholder = st.empty()
+
 qp = st.experimental_get_query_params()
 token_q = qp.get("token", [""])[0]
 obs_q   = qp.get("obs", [""])[0]
@@ -44,7 +45,7 @@ def fetch_observation(token, obs_url):
     return r.json()
 
 # =========================================
-# Patient Data (Top)
+# Patient Data Placeholder
 # =========================================
 patient_data_placeholder = st.empty()
 
@@ -52,13 +53,14 @@ with patient_data_placeholder.container():
     st.expander("Patient Data (Click to Expand)", expanded=False)
 
 # =========================================
-# Token & Observation URL (Bottom)
+# Token & Observation URL
 # =========================================
 token = st.text_input("Token", value=token_q, type="password")
 obs_url = st.text_input("Observation URL", value=obs_q)
 st.markdown("---")
+
 # =========================================
-# Auto Run Logic (UNCHANGED)
+# Auto Run Logic
 # =========================================
 if token and obs_url:
     with st.spinner("Fetching Patient Data..."):
@@ -86,7 +88,6 @@ if token and obs_url:
             if proc.returncode != 0:
                 raise RuntimeError(proc.stderr)
 
-            # 從 stdout 讀回記憶體 ECG array
             try:
                 ecg_signal = json.loads(proc.stdout.splitlines()[-1])
             except Exception as e:
@@ -103,7 +104,6 @@ if token and obs_url:
             if proc.returncode != 0:
                 raise RuntimeError(proc.stderr)
 
-            # 從 stdout 讀回記憶體 HRV dataframe
             try:
                 h0_json = proc.stdout.splitlines()[-1]
                 hrv_df = pd.read_json(h0_json, orient="records")
@@ -139,7 +139,6 @@ if token and obs_url:
     with risk_placeholder.container():
         pie_col, value_col = st.columns([1, 2], gap="large")
 
-        # ----- Pie -----
         with pie_col:
             components.html(
                 f"""
@@ -172,7 +171,6 @@ if token and obs_url:
                 height=140,
             )
 
-        # ----- Value -----
         with value_col:
             st.markdown(
                 f"""
@@ -188,102 +186,78 @@ if token and obs_url:
                 unsafe_allow_html=True,
             )
 
-
     # =========================================
-    # ECG Input & HRV Features (用新 placeholder)
+    # ECG Input & HRV Features（位置已修正）
     # =========================================
     with ecg_hrv_placeholder.container():
         st.markdown("---")
         st.subheader("ECG Input & HRV Features")
-    
-    # ----- ECG Plot (Interactive, Scrollable) -----
-    try:
-        if ecg_signal is None:
-            ecg_df = pd.read_csv(ecg_csv, header=None)
-            ecg_signal = ecg_df.iloc[:, 0].values
-    
-        ecg_signal = np.asarray(ecg_signal)
-    
-        # =========================
-        # 1. Downsample for clarity
-        # =========================
-        stride = 5   # ← 關鍵參數：數字越大，點越稀疏（建議 5–20）
-        ecg_ds = ecg_signal[::stride]
-        x_ds = np.arange(len(ecg_ds)) * stride
-    
-        # =========================
-        # 2. Plotly ECG
-        # =========================
-        fig = go.Figure()
-    
-        fig.add_trace(
-            go.Scatter(
-                x=x_ds,
-                y=ecg_ds,
-                mode="lines",
-                line=dict(width=1),
-                name="ECG"
-            )
-        )
-    
-        fig.update_layout(
-            title="ECG Signal (Interactive)",
-            xaxis_title="Sample Index",
-            yaxis_title="Amplitude",
-            height=300,
-            margin=dict(l=40, r=20, t=50, b=40),
-            xaxis=dict(
-                rangeslider=dict(visible=True),  # 👈 底下滑動條
-                type="linear"
-            )
-        )
-    
-        # =========================
-        # 3. Render
-        # =========================
-        st.plotly_chart(fig, use_container_width=True)
-    
-    except Exception as e:
-        st.warning(f"Failed to plot ECG signal: {e}")
 
-    
-    # ----- HRV Features (2 rows × 5 metrics) -----
-    try:
-        if hrv_df is None:
-            hrv_df = pd.read_csv(h0_csv)
-    
-        st.markdown("**HRV Features Output**")
-    
-        # 只取第一列（單一 episode）
-        row = hrv_df.iloc[0]
-    
-        feature_names = list(row.index)
-        feature_values = row.values
-    
-        # 防呆：確認是 10 個
-        if len(feature_names) != 10:
-            st.warning(f"Expected 10 HRV features, got {len(feature_names)}")
-    
-        # ===== 第一排（前 5 個）=====
-        cols1 = st.columns(5)
-        for i in range(5):
-            with cols1[i]:
-                st.metric(
-                    label=feature_names[i],
-                    value=f"{feature_values[i]:.3f}"
+        # ----- ECG Plot -----
+        try:
+            if ecg_signal is None:
+                ecg_df = pd.read_csv(ecg_csv, header=None)
+                ecg_signal = ecg_df.iloc[:, 0].values
+
+            ecg_signal = np.asarray(ecg_signal)
+            stride = 5
+            ecg_ds = ecg_signal[::stride]
+            x_ds = np.arange(len(ecg_ds)) * stride
+
+            fig = go.Figure()
+            fig.add_trace(
+                go.Scatter(
+                    x=x_ds,
+                    y=ecg_ds,
+                    mode="lines",
+                    line=dict(width=1),
+                    name="ECG"
                 )
-    
-        # ===== 第二排（後 5 個）=====
-        cols2 = st.columns(5)
-        for i in range(5, 10):
-            with cols2[i - 5]:
-                st.metric(
-                    label=feature_names[i],
-                    value=f"{feature_values[i]:.3f}"
+            )
+
+            fig.update_layout(
+                title="ECG Signal (Interactive)",
+                xaxis_title="Sample Index",
+                yaxis_title="Amplitude",
+                height=300,
+                margin=dict(l=40, r=20, t=50, b=40),
+                xaxis=dict(
+                    rangeslider=dict(visible=True),
+                    type="linear"
                 )
-    
-    except Exception as e:
-        st.warning(f"Failed to render HRV features: {e}")
-   
+            )
+
+            st.plotly_chart(fig, use_container_width=True)
+
+        except Exception as e:
+            st.warning(f"Failed to plot ECG signal: {e}")
+
+        # ----- HRV Features -----
+        try:
+            if hrv_df is None:
+                hrv_df = pd.read_csv(h0_csv)
+
+            st.markdown("**HRV Features Output**")
+
+            row = hrv_df.iloc[0]
+            feature_names = list(row.index)
+            feature_values = row.values
+
+            if len(feature_names) != 10:
+                st.warning(f"Expected 10 HRV features, got {len(feature_names)}")
+
+            cols1 = st.columns(5)
+            for i in range(5):
+                with cols1[i]:
+                    st.metric(feature_names[i], f"{feature_values[i]:.3f}")
+
+            cols2 = st.columns(5)
+            for i in range(5, 10):
+                with cols2[i - 5]:
+                    st.metric(feature_names[i], f"{feature_values[i]:.3f}")
+
+        except Exception as e:
+            st.warning(f"Failed to render HRV features: {e}")
+
 else:
     st.info("Please enter Token and Observation URL to start calculation")
