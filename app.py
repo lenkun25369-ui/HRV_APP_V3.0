@@ -47,9 +47,11 @@ def fetch_observation(token, obs_url):
 # =========================================
 # Patient Data Placeholder
 # =========================================
+
 patient_data_placeholder = st.empty()
 
 with patient_data_placeholder.container():
+    st.markdown("---")
     st.expander("Patient Data (Click to Expand)", expanded=False)
 
 # =========================================
@@ -57,7 +59,7 @@ with patient_data_placeholder.container():
 # =========================================
 token = st.text_input("Token", value=token_q, type="password")
 obs_url = st.text_input("Observation URL", value=obs_q)
-st.markdown("---")
+
 
 # =========================================
 # Auto Run Logic
@@ -231,18 +233,25 @@ if token and obs_url:
                 )
             )
         
+            # 預設顯示前一小段（保證有資料）
+            init_end = min(len(x_ds) - 1, 2000)
+            
             fig.update_layout(
                 title="ECG Signal (Interactive)",
                 xaxis_title="Sample Index",
                 yaxis_title="Amplitude",
                 height=300,
                 margin=dict(l=40, r=20, t=50, b=40),
-        
-                # ✅ 明確指定 y 軸範圍（解你現在的問題）
-                yaxis=dict(
-                    range=[y_min - y_pad, y_max + y_pad],
-                    fixedrange=False
+                xaxis=dict(
+                    range=[x_ds[0], x_ds[init_end]],   # ⭐ 關鍵：不要一開始就全範圍
+                    rangeslider=dict(visible=True),
+                    type="linear"
                 ),
+                yaxis=dict(
+                    autorange=True
+                )
+            )
+
         
                 # x 軸可拖拉 + range slider
                 xaxis=dict(
