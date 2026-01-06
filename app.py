@@ -47,7 +47,6 @@ def fetch_observation(token, obs_url):
 # =========================================
 # Patient Data Placeholder
 # =========================================
-
 patient_data_placeholder = st.empty()
 
 with patient_data_placeholder.container():
@@ -59,7 +58,6 @@ with patient_data_placeholder.container():
 # =========================================
 token = st.text_input("Token", value=token_q, type="password")
 obs_url = st.text_input("Observation URL", value=obs_q)
-
 
 # =========================================
 # Auto Run Logic
@@ -189,40 +187,26 @@ if token and obs_url:
             )
 
     # =========================================
-    # ECG Input & HRV Features（位置已修正）
+    # ECG Input & HRV Features
     # =========================================
     with ecg_hrv_placeholder.container():
         st.markdown("---")
         st.subheader("ECG Input & HRV Features")
 
-               
-        # ----- ECG Plot (Interactive, Scrollable, Correct Y-scale) -----
+        # ----- ECG Plot -----
         try:
             if ecg_signal is None:
                 ecg_df = pd.read_csv(ecg_csv, header=None)
                 ecg_signal = ecg_df.iloc[:, 0].values
-        
-            ecg_signal = np.asarray(ecg_signal)
-        
-            # =========================
-            # Downsample for clarity
-            # =========================
+
+            # ⭐⭐⭐ 唯一修改在這一行 ⭐⭐⭐
+            ecg_signal = np.asarray(ecg_signal, dtype=float).ravel()  # CRITICAL FIX
+
             stride = 5
             ecg_ds = ecg_signal[::stride]
             x_ds = np.arange(len(ecg_ds)) * stride
-        
-            # =========================
-            # Y-axis range (CRITICAL FIX)
-            # =========================
-            y_min = float(np.min(ecg_ds))
-            y_max = float(np.max(ecg_ds))
-            y_pad = 0.05 * (y_max - y_min)  # 5% padding
-        
-            # =========================
-            # Plotly ECG
-            # =========================
+
             fig = go.Figure()
-        
             fig.add_trace(
                 go.Scatter(
                     x=x_ds,
@@ -232,10 +216,9 @@ if token and obs_url:
                     name="ECG"
                 )
             )
-        
-            # 預設顯示前一小段（保證有資料）
+
             init_end = min(len(x_ds) - 1, 2000)
-            
+
             fig.update_layout(
                 title="ECG Signal (Interactive)",
                 xaxis_title="Sample Index",
@@ -243,22 +226,17 @@ if token and obs_url:
                 height=300,
                 margin=dict(l=40, r=20, t=50, b=40),
                 xaxis=dict(
-                    range=[x_ds[0], x_ds[init_end]],   # ⭐ 關鍵：不要一開始就全範圍
+                    range=[x_ds[0], x_ds[init_end]],
                     rangeslider=dict(visible=True),
                     type="linear"
                 ),
-                yaxis=dict(
-                    autorange=True
-                )
+                yaxis=dict(autorange=True)
             )
 
-        
-
             st.plotly_chart(fig, use_container_width=True)
-        
+
         except Exception as e:
             st.warning(f"Failed to plot ECG signal: {e}")
-        
 
         # ----- HRV Features -----
         try:
@@ -273,6 +251,7 @@ if token and obs_url:
 
             if len(feature_names) != 10:
                 st.warning(f"Expected 10 HRV features, got {len(feature_names)}")
+                st.json(feature_names)
 
             cols1 = st.columns(5)
             for i in range(5):
