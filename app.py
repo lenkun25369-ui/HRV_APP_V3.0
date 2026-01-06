@@ -158,7 +158,7 @@ if token and obs_url:
                 .pie-inner {{
                     width: 70px;
                     height: 70px;
-                    background: #0e1117;
+                    background: var(--secondary-background-color);
                     border-radius: 50%;
                 }}
                 </style>
