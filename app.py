@@ -247,43 +247,43 @@ if token and obs_url:
         st.warning(f"Failed to plot ECG signal: {e}")
 
     
-        # ----- HRV Features (2 rows × 5 metrics) -----
-        try:
-            if hrv_df is None:
-                hrv_df = pd.read_csv(h0_csv)
-        
-            st.markdown("**HRV Features Output**")
-        
-            # 只取第一列（單一 episode）
-            row = hrv_df.iloc[0]
-        
-            feature_names = list(row.index)
-            feature_values = row.values
-        
-            # 防呆：確認是 10 個
-            if len(feature_names) != 10:
-                st.warning(f"Expected 10 HRV features, got {len(feature_names)}")
-        
-            # ===== 第一排（前 5 個）=====
-            cols1 = st.columns(5)
-            for i in range(5):
-                with cols1[i]:
-                    st.metric(
-                        label=feature_names[i],
-                        value=f"{feature_values[i]:.3f}"
-                    )
-        
-            # ===== 第二排（後 5 個）=====
-            cols2 = st.columns(5)
-            for i in range(5, 10):
-                with cols2[i - 5]:
-                    st.metric(
-                        label=feature_names[i],
-                        value=f"{feature_values[i]:.3f}"
-                    )
-        
-        except Exception as e:
-            st.warning(f"Failed to render HRV features: {e}")
+    # ----- HRV Features (2 rows × 5 metrics) -----
+    try:
+        if hrv_df is None:
+            hrv_df = pd.read_csv(h0_csv)
+    
+        st.markdown("**HRV Features Output**")
+    
+        # 只取第一列（單一 episode）
+        row = hrv_df.iloc[0]
+    
+        feature_names = list(row.index)
+        feature_values = row.values
+    
+        # 防呆：確認是 10 個
+        if len(feature_names) != 10:
+            st.warning(f"Expected 10 HRV features, got {len(feature_names)}")
+    
+        # ===== 第一排（前 5 個）=====
+        cols1 = st.columns(5)
+        for i in range(5):
+            with cols1[i]:
+                st.metric(
+                    label=feature_names[i],
+                    value=f"{feature_values[i]:.3f}"
+                )
+    
+        # ===== 第二排（後 5 個）=====
+        cols2 = st.columns(5)
+        for i in range(5, 10):
+            with cols2[i - 5]:
+                st.metric(
+                    label=feature_names[i],
+                    value=f"{feature_values[i]:.3f}"
+                )
+    
+    except Exception as e:
+        st.warning(f"Failed to render HRV features: {e}")
    
 else:
     st.info("Please enter Token and Observation URL to start calculation")
