@@ -193,18 +193,34 @@ if token and obs_url:
         st.markdown("---")
         st.subheader("ECG Input & HRV Features")
 
-        # ----- ECG Plot -----
+               
+        # ----- ECG Plot (Interactive, Scrollable, Correct Y-scale) -----
         try:
             if ecg_signal is None:
                 ecg_df = pd.read_csv(ecg_csv, header=None)
                 ecg_signal = ecg_df.iloc[:, 0].values
-
+        
             ecg_signal = np.asarray(ecg_signal)
+        
+            # =========================
+            # Downsample for clarity
+            # =========================
             stride = 5
             ecg_ds = ecg_signal[::stride]
             x_ds = np.arange(len(ecg_ds)) * stride
-
+        
+            # =========================
+            # Y-axis range (CRITICAL FIX)
+            # =========================
+            y_min = float(np.min(ecg_ds))
+            y_max = float(np.max(ecg_ds))
+            y_pad = 0.05 * (y_max - y_min)  # 5% padding
+        
+            # =========================
+            # Plotly ECG
+            # =========================
             fig = go.Figure()
+        
             fig.add_trace(
                 go.Scatter(
                     x=x_ds,
@@ -214,25 +230,33 @@ if token and obs_url:
                     name="ECG"
                 )
             )
-
+        
             fig.update_layout(
                 title="ECG Signal (Interactive)",
                 xaxis_title="Sample Index",
                 yaxis_title="Amplitude",
                 height=300,
                 margin=dict(l=40, r=20, t=50, b=40),
+        
+                # ✅ 明確指定 y 軸範圍（解你現在的問題）
+                yaxis=dict(
+                    range=[y_min - y_pad, y_max + y_pad],
+                    fixedrange=False
+                ),
+        
+                # x 軸可拖拉 + range slider
                 xaxis=dict(
-                    range=[x_ds[0], x_ds[-1]],   # ⭐ 關鍵修正
+                    range=[x_ds[0], x_ds[-1]],
                     rangeslider=dict(visible=True),
                     type="linear"
                 )
             )
-
-
+        
             st.plotly_chart(fig, use_container_width=True)
-
+        
         except Exception as e:
             st.warning(f"Failed to plot ECG signal: {e}")
+        
 
         # ----- HRV Features -----
         try:
