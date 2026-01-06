@@ -251,7 +251,7 @@ if token and obs_url:
 
             if len(feature_names) != 10:
                 st.warning(f"Expected 10 HRV features, got {len(feature_names)}")
-                st.json(feature_names)
+                
 
             cols1 = st.columns(5)
             for i in range(5):
