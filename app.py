@@ -250,9 +250,9 @@ if token and obs_url:
             n = len(hr)
             x = np.arange(n)
 
-            idx = 750
-            if 0 <= idx < n:
-                st.write(f"HR at index {idx}: {hr[idx]:.2f} bpm")
+            # idx = 750
+            # if 0 <= idx < n:
+            #     st.write(f"HR at index {idx}: {hr[idx]:.2f} bpm")
 
             start_idx = st.slider(
                 "View window start index",
@@ -262,7 +262,7 @@ if token and obs_url:
                 step=1
             )
 
-            window_size = 10
+            window_size = 30
             end_idx = min(n, start_idx + window_size)
 
             hr_win = hr[start_idx:end_idx]
@@ -275,10 +275,10 @@ if token and obs_url:
             pad = 0.05 * (ymax - ymin)
 
             fig, ax = plt.subplots(figsize=(10, 3))
-            ax.plot(x_win/7500, hr_win, linewidth=1)
+            ax.plot(x_win/125, hr_win, linewidth=1)
             ax.set_title("Heart Rate (index-based view)")
-            ax.set_xlabel("Second")
-            ax.set_ylabel("BPM")
+            ax.set_xlabel("Second(s)")
+            ax.set_ylabel("Voltage(mV)")
             ax.set_xlim(start_idx, end_idx)
             ax.set_ylim(ymin - pad, ymax + pad)
 
