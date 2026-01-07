@@ -228,8 +228,18 @@ if token and obs_url:
                 st.write(f"HR at index {idx}: {hr[idx]:.2f} bpm")
     
             # 👉 初始顯示區間
-            start_idx = 750
-            end_idx = 800
+            # 視窗起點控制
+            start_idx = st.slider(
+                "View window start index",
+                min_value=0,
+                max_value=max(0, n - 50),
+                value=750,
+                step=1
+            )
+            
+            window_size = 50
+            end_idx = start_idx + window_size
+
             start_idx = max(0, start_idx)
             end_idx = min(n, end_idx)
     
