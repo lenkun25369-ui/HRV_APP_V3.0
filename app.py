@@ -262,7 +262,7 @@ if token and obs_url:
                 step=1
             )
 
-            window_size = 50
+            window_size = 500
             end_idx = min(n, start_idx + window_size)
 
             hr_win = hr[start_idx:end_idx]
