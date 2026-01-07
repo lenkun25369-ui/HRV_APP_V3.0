@@ -255,7 +255,7 @@ if token and obs_url:
             #     st.write(f"HR at index {idx}: {hr[idx]:.2f} bpm")
 
             start_idx = st.slider(
-                "View window start index",
+                "View start index",
                 min_value=0,
                 max_value=max(0, n - 500),
                 value=min(750, max(0, n - 50)),
@@ -296,7 +296,7 @@ if token and obs_url:
         try:
             hrv_df = st.session_state.hrv_df
 
-            st.markdown("**HRV Features Output**")
+            st.markdown("**Generated HRV Features **")
 
             row = hrv_df.iloc[0]
             feature_names = list(row.index)[:10]
