@@ -282,8 +282,8 @@ if token and obs_url:
             ax.set_xlim(start_idx, end_idx)
             ax.set_ylim(ymin - pad, ymax + pad)
 
-            if start_idx <= idx <= end_idx:
-                ax.axvline(x=idx, linestyle="--", alpha=0.5)
+            # if start_idx <= idx <= end_idx:
+            #     ax.axvline(x=idx, linestyle="--", alpha=0.5)
 
             ax.grid(alpha=0.3)
             st.pyplot(fig)
