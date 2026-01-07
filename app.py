@@ -257,7 +257,7 @@ if token and obs_url:
             start_idx = st.slider(
                 "View window start index",
                 min_value=0,
-                max_value=max(0, n - 50),
+                max_value=max(0, n - 500),
                 value=min(750, max(0, n - 50)),
                 step=1
             )
