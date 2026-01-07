@@ -90,13 +90,13 @@ if token and obs_url:
             )
             if proc.returncode != 0:
                 raise RuntimeError(proc.stderr)
-        ecg_df = pd.read_csv(ecg_csv, header=None)
-        ecg_signal = np.asarray(ecg_df.iloc[:, 0].values, dtype=float).ravel()
-            try:
-                ecg_signal = json.loads(proc.stdout.splitlines()[-1])
-            except Exception as e:
-                st.warning(f"Failed to load ECG from subprocess: {e}")
-                ecg_signal = None
+            ecg_df = pd.read_csv(ecg_csv, header=None)
+            ecg_signal = np.asarray(ecg_df.iloc[:, 0].values, dtype=float).ravel()
+            # try:
+            #     ecg_signal = json.loads(proc.stdout.splitlines()[-1])
+            # except Exception as e:
+            #     st.warning(f"Failed to load ECG from subprocess: {e}")
+            #     ecg_signal = None
 
         # ----- Generate HRV Features -----
         with st.spinner("Generating HRV features..."):
