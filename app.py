@@ -213,56 +213,42 @@ if token and obs_url:
         st.markdown("---")
         st.subheader("ECG Input & HRV Features")
 
-        # ----- ECG Plot -----
         try:
-       
-            # ecg_df = pd.read_csv(ecg_csv, header=None)
-            # ecg_signal = ecg_df.iloc[:, 0].values
-
-            # # ⭐⭐⭐ 唯一修改在這一行 ⭐⭐⭐
-            # ecg_signal = np.asarray(ecg_signal, dtype=float).ravel()  # CRITICAL FIX
-            st.write("ECG stats:",
-                     float(ecg_signal.min()),
-                     float(ecg_signal.max()),
-                     float(ecg_signal.std()))
-            stride = 5
-            ecg_ds = ecg_signal[::stride]
-            x_ds = np.arange(len(ecg_ds)) * stride
-
+            hr = np.asarray(ecg_signal, dtype=float).ravel()
+        
+            st.write("HR stats:", float(hr.min()), float(hr.max()), float(hr.std()))
+        
+            x = np.arange(len(hr)) / 125.0  # 秒
+        
+            # 用 percentile 避免被 outlier 拉爆
+            ymin, ymax = np.percentile(hr, [1, 99])
+            if ymin == ymax:
+                ymin -= 1
+                ymax += 1
+        
             fig = go.Figure()
-            fig.add_trace(
-                go.Scatter(
-                    x=x_ds,
-                    y=ecg_ds,
-                    mode="lines",
-                    line=dict(width=1),
-                    name="ECG"
-                )
-            )
-
-            init_end = min(len(x_ds) - 1, 2000)
-
-            ymin, ymax = np.percentile(ecg_ds, [1, 99])
-            
+            fig.add_trace(go.Scatter(x=x, y=hr, mode="lines", name="Heart Rate (bpm)"))
+        
+            init_end = min(len(x) - 1, 10 * 125)  # 預設先看 10 秒
             fig.update_layout(
-                title="ECG Signal (Interactive)",
-                xaxis_title="Sample Index",
-                yaxis_title="Amplitude",
+                title="Heart Rate Trend (125 Hz)",
+                xaxis_title="Time (s)",
+                yaxis_title="bpm",
                 height=300,
                 margin=dict(l=40, r=20, t=50, b=40),
                 xaxis=dict(
-                    range=[x_ds[0], x_ds[init_end]],
+                    range=[x[0], x[init_end]],
                     rangeslider=dict(visible=True),
-                    type="linear"
+                    type="linear",
                 ),
-                yaxis=dict(range=[ymin, ymax])  # ⭐ 關鍵
+                yaxis=dict(range=[ymin, ymax]),
             )
-
-
+        
             st.plotly_chart(fig, use_container_width=True)
-
+        
         except Exception as e:
-            st.warning(f"Failed to plot ECG signal: {e}")
+            st.warning(f"Failed to plot HR trend: {e}")
+
 
         # ----- HRV Features -----
         try:
