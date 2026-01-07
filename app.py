@@ -47,10 +47,11 @@ def fetch_observation(token, obs_url):
 # =========================================
 # Patient Data Placeholder
 # =========================================
+st.markdown("---")
 patient_data_placeholder = st.empty()
 
 with patient_data_placeholder.container():
-    st.markdown("---")
+    
     st.expander("Patient Data (Click to Expand)", expanded=False)
 
 # =========================================
@@ -194,10 +195,9 @@ if token and obs_url:
         st.subheader("ECG Input & HRV Features")
 
         # ----- ECG Plot -----
-        try:
-            if ecg_signal is None:
-                ecg_df = pd.read_csv(ecg_csv, header=None)
-                ecg_signal = ecg_df.iloc[:, 0].values
+
+            ecg_df = pd.read_csv(ecg_csv, header=None)
+            ecg_signal = ecg_df.iloc[:, 0].values
 
             # ⭐⭐⭐ 唯一修改在這一行 ⭐⭐⭐
             ecg_signal = np.asarray(ecg_signal, dtype=float).ravel()  # CRITICAL FIX
