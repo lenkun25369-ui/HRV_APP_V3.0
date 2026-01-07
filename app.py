@@ -221,7 +221,10 @@ if token and obs_url:
 
             # # ⭐⭐⭐ 唯一修改在這一行 ⭐⭐⭐
             # ecg_signal = np.asarray(ecg_signal, dtype=float).ravel()  # CRITICAL FIX
-
+            st.write("ECG stats:",
+                     float(ecg_signal.min()),
+                     float(ecg_signal.max()),
+                     float(ecg_signal.std()))
             stride = 5
             ecg_ds = ecg_signal[::stride]
             x_ds = np.arange(len(ecg_ds)) * stride
@@ -239,6 +242,8 @@ if token and obs_url:
 
             init_end = min(len(x_ds) - 1, 2000)
 
+            ymin, ymax = np.percentile(ecg_ds, [1, 99])
+            
             fig.update_layout(
                 title="ECG Signal (Interactive)",
                 xaxis_title="Sample Index",
@@ -250,8 +255,9 @@ if token and obs_url:
                     rangeslider=dict(visible=True),
                     type="linear"
                 ),
-                yaxis=dict(autorange=True)
+                yaxis=dict(range=[ymin, ymax])  # ⭐ 關鍵
             )
+
 
             st.plotly_chart(fig, use_container_width=True)
 
