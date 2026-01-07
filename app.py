@@ -218,7 +218,9 @@ if token and obs_url:
         
             n = len(hr)
             x = np.arange(n)  # 每個點的順序
-        
+            idx = 750
+            if 0 <= idx < len(hr):
+                st.write(f"HR at index {idx}: {hr[idx]:.2f} bpm")
             fig = go.Figure()
             fig.add_trace(
                 go.Scatter(
@@ -233,7 +235,12 @@ if token and obs_url:
             # 👉 一開始只顯示 750–800
             start_idx = 750
             end_idx = 800
-        
+            ymin, ymax = hr.min(), hr.max()
+    
+            # 保險：避免完全平坦
+            if ymin == ymax:
+                ymin -= 1
+                ymax += 1
             fig.update_layout(
                 title="Heart Rate (index-based view)",
                 xaxis_title="Sample index",
