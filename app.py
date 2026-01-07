@@ -75,6 +75,9 @@ if token and obs_url:
         obs_path = os.path.join(td, "obs.json")
         ecg_csv  = os.path.join(td, "ECG_5min.csv")
         h0_csv   = os.path.join(td, "h0.csv")
+            
+        ecg_df = pd.read_csv(ecg_csv, header=None)
+        ecg_signal = np.asarray(ecg_df.iloc[:, 0].values, dtype=float).ravel()
 
         with open(obs_path, "w") as f:
             json.dump(obs, f)
@@ -197,11 +200,11 @@ if token and obs_url:
         # ----- ECG Plot -----
         try:
        
-            ecg_df = pd.read_csv(ecg_csv, header=None)
-            ecg_signal = ecg_df.iloc[:, 0].values
+            # ecg_df = pd.read_csv(ecg_csv, header=None)
+            # ecg_signal = ecg_df.iloc[:, 0].values
 
-            # ⭐⭐⭐ 唯一修改在這一行 ⭐⭐⭐
-            ecg_signal = np.asarray(ecg_signal, dtype=float).ravel()  # CRITICAL FIX
+            # # ⭐⭐⭐ 唯一修改在這一行 ⭐⭐⭐
+            # ecg_signal = np.asarray(ecg_signal, dtype=float).ravel()  # CRITICAL FIX
 
             stride = 5
             ecg_ds = ecg_signal[::stride]
