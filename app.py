@@ -4,6 +4,7 @@ import requests
 import streamlit.components.v1 as components
 import pandas as pd
 import matplotlib.pyplot as plt
+import plotly.graph_objects as go
 import numpy as np
 from shock_rate import predict_shock
 
@@ -25,8 +26,8 @@ obs_q   = qp.get("obs", [""])[0]
 # =========================================
 @st.cache_resource
 def _check_models_exist():
-    assert os.path.exists("models/model_focalloss.h5")
-    assert os.path.exists("models/xgb_model.json")
+    assert os.path.exists("models/model_focalloss.h5"), "Missing models/model_focalloss.h5"
+    assert os.path.exists("models/xgb_model.json"), "Missing models/xgb_model.json"
 
 _check_models_exist()
 
@@ -48,7 +49,9 @@ def fetch_observation(token, obs_url):
 # =========================================
 st.markdown("---")
 patient_data_placeholder = st.empty()
+
 with patient_data_placeholder.container():
+    
     st.expander("Patient Data (Click to Expand)", expanded=False)
 
 # =========================================
@@ -61,26 +64,25 @@ obs_url = st.text_input("Observation URL", value=obs_q)
 # Auto Run Logic
 # =========================================
 if token and obs_url:
+    with st.spinner("Fetching Patient Data..."):
+        obs = fetch_observation(token, obs_url)
 
-    # ⭐⭐⭐ 重流程只跑一次 ⭐⭐⭐
-    if "analysis_done" not in st.session_state:
+    with patient_data_placeholder.container():
+        with st.expander("Patient Data (Click to Expand)", expanded=False):
+            st.json(obs)
 
-        with st.spinner("Fetching Patient Data..."):
-            obs = fetch_observation(token, obs_url)
+    with tempfile.TemporaryDirectory() as td:
+        obs_path = os.path.join(td, "obs.json")
+        ecg_csv  = os.path.join(td, "ECG_5min.csv")
+        h0_csv   = os.path.join(td, "h0.csv")
+            
 
-        with patient_data_placeholder.container():
-            with st.expander("Patient Data (Click to Expand)", expanded=False):
-                st.json(obs)
 
-        with tempfile.TemporaryDirectory() as td:
-            obs_path = os.path.join(td, "obs.json")
-            ecg_csv  = os.path.join(td, "ECG_5min.csv")
-            h0_csv   = os.path.join(td, "h0.csv")
+        with open(obs_path, "w") as f:
+            json.dump(obs, f)
 
-            with open(obs_path, "w") as f:
-                json.dump(obs, f)
-
-            # ----- Parse ECG -----
+        # ----- Parse ECG -----
+        with st.spinner("Parsing ECG..."):
             proc = subprocess.run(
                 ["python", "parse_fhir_ecg_to_csv.py", obs_path, ecg_csv],
                 capture_output=True,
@@ -88,18 +90,32 @@ if token and obs_url:
             )
             if proc.returncode != 0:
                 raise RuntimeError(proc.stderr)
-
+            # ===== Robust ECG loading (REPLACE ORIGINAL 2 LINES) =====
+            if not os.path.exists(ecg_csv):
+                raise RuntimeError("ECG CSV not created by parse_fhir_ecg_to_csv.py")
+            
             ecg_df = pd.read_csv(ecg_csv, header=None)
+            
+            # 防止非數值 / 空檔 / header 混入
             ecg_signal = (
                 pd.to_numeric(ecg_df.iloc[:, 0], errors="coerce")
                 .dropna()
                 .to_numpy(dtype=float)
                 .ravel()
             )
+            
             if ecg_signal.size == 0:
-                raise RuntimeError("ECG signal empty")
+                raise RuntimeError("ECG signal is empty after parsing")
+            # =========================================================
 
-            # ----- Generate HRV -----
+            # try:
+            #     ecg_signal = json.loads(proc.stdout.splitlines()[-1])
+            # except Exception as e:
+            #     st.warning(f"Failed to load ECG from subprocess: {e}")
+            #     ecg_signal = None
+
+        # ----- Generate HRV Features -----
+        with st.spinner("Generating HRV features..."):
             proc = subprocess.run(
                 ["python", "generate_HRV_10_features.py", ecg_csv, h0_csv],
                 capture_output=True,
@@ -108,77 +124,197 @@ if token and obs_url:
             if proc.returncode != 0:
                 raise RuntimeError(proc.stderr)
 
-            hrv_df = pd.read_json(proc.stdout.splitlines()[-1], orient="records")
+            try:
+                h0_json = proc.stdout.splitlines()[-1]
+                hrv_df = pd.read_json(h0_json, orient="records")
+            except Exception as e:
+                st.warning(f"Failed to load HRV from subprocess: {e}")
+                hrv_df = None
 
-            # ----- Predict Risk -----
+        # ----- Predict Shock Risk -----
+        with st.spinner("Predicting shock risk..."):
             preds = predict_shock(h0_csv)
 
-        # ⭐ 存進 session_state
-        st.session_state.obs = obs
-        st.session_state.ecg_signal = ecg_signal
-        st.session_state.hrv_df = hrv_df
-        st.session_state.preds = preds
-        st.session_state.analysis_done = True
+    st.success("Done")
 
-        st.success("Done")
+    with risk_placeholder.container():
+        risk_pct = round(preds[0] * 100, 2)
 
-    # ===== 以下開始：只 rerender，不重算 =====
-    ecg_signal = st.session_state.ecg_signal
-    hrv_df = st.session_state.hrv_df
-    preds = st.session_state.preds
+    # =========================================
+    # Risk Level
+    # =========================================
+    if risk_pct < 20:
+        risk_label = "LOW RISK"
+        risk_color = "#2ecc71"
+    elif risk_pct < 40:
+        risk_label = "MODERATE RISK"
+        risk_color = "#f39c12"
+    else:
+        risk_label = "HIGH RISK"
+        risk_color = "#e74c3c"
 
     # =========================================
     # Risk Visualization
     # =========================================
-    risk_pct = round(preds[0] * 100, 2)
-    risk_label = "LOW RISK" if risk_pct < 20 else "MODERATE RISK" if risk_pct < 40 else "HIGH RISK"
-    risk_color = "#2ecc71" if risk_pct < 20 else "#f39c12" if risk_pct < 40 else "#e74c3c"
-
     with risk_placeholder.container():
-        pie_col, value_col = st.columns([1, 2])
+        pie_col, value_col = st.columns([1, 2], gap="large")
+
         with pie_col:
             components.html(
-                f"<div style='width:120px;height:120px;border-radius:50%;background:conic-gradient({risk_color} {risk_pct}%,#2c2c2c {risk_pct}%);'></div>",
+                f"""
+                <style>
+                .pie {{
+                    width: 120px;
+                    height: 120px;
+                    border-radius: 50%;
+                    background: conic-gradient(
+                        {risk_color} {risk_pct}%,
+                        #2c2c2c {risk_pct}% 100%
+                    );
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                }}
+                .pie-inner {{
+                    width: 70px;
+                    height: 70px;
+                    background: var(--secondary-background-color);
+                    border-radius: 50%;
+                }}
+                </style>
+                <div style="display:flex; justify-content:center;">
+                    <div class="pie">
+                        <div class="pie-inner"></div>
+                    </div>
+                </div>
+                """,
                 height=140,
             )
+
         with value_col:
-            st.markdown(f"### {risk_pct:.2f}%  \n**{risk_label}**")
+            st.markdown(
+                f"""
+                <div style="text-align:center; margin-top:18px;">
+                    <div style="font-size:42px; font-weight:800;">
+                        {risk_pct:.2f}%
+                    </div>
+                    <div style="font-size:20px; font-weight:700; color:{risk_color};">
+                        {risk_label}
+                    </div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
 
     # =========================================
     # ECG Input & HRV Features
     # =========================================
+
+        
     with ecg_hrv_placeholder.container():
         st.markdown("---")
         st.subheader("ECG Input & HRV Features")
+    
+        try:
+            # ============================
+            # 資料只準備一次（關鍵修改）
+            # ============================
+            if "hr_signal" not in st.session_state:
+                st.session_state.hr_signal = np.asarray(ecg_signal, dtype=float).ravel()
+    
+            hr = st.session_state.hr_signal
+            n = len(hr)
+            x = np.arange(n)
+    
+            # 指定要看的 index
+            idx = 750
+            if 0 <= idx < n:
+                st.write(f"HR at index {idx}: {hr[idx]:.2f} bpm")
+    
+            # ============================
+            # 視窗控制（只影響顯示）
+            # ============================
+            start_idx = st.slider(
+                "View window start index",
+                min_value=0,
+                max_value=max(0, n - 50),
+                value=750,
+                step=1
+            )
+    
+            window_size = 50
+            end_idx = start_idx + window_size
+    
+            start_idx = max(0, start_idx)
+            end_idx = min(n, end_idx)
+    
+            hr_win = hr[start_idx:end_idx]
+            x_win = x[start_idx:end_idx]
+    
+            # ============================
+            # y 軸範圍（顯示用）
+            # ============================
+            ymin, ymax = float(hr_win.min()), float(hr_win.max())
+            if ymin == ymax:
+                ymin -= 1
+                ymax += 1
+            pad = 0.05 * (ymax - ymin)
+    
+            # ============================
+            # matplotlib plot（只重畫）
+            # ============================
+            fig, ax = plt.subplots(figsize=(10, 3))
+            ax.plot(x_win, hr_win, linewidth=1)
+    
+            ax.set_title("Heart Rate (index-based view)")
+            ax.set_xlabel("Sample index")
+            ax.set_ylabel("bpm")
+    
+            ax.set_xlim(start_idx, end_idx)
+            ax.set_ylim(ymin - pad, ymax + pad)
+    
+            # 標示 index 750
+            if start_idx <= idx <= end_idx:
+                ax.axvline(x=idx, linestyle="--", alpha=0.5)
+    
+            ax.grid(alpha=0.3)
+    
+            st.pyplot(fig)
+            plt.close(fig)
+    
+        except Exception as e:
+            st.warning(f"Failed to plot HR: {e}")
 
-        hr = st.session_state.ecg_signal
-        n = len(hr)
 
-        start_idx = st.slider(
-            "View window start index",
-            min_value=0,
-            max_value=max(0, n - 50),
-            value=750,
-            step=1
-        )
 
-        win = hr[start_idx:start_idx + 50]
-        x = np.arange(start_idx, start_idx + len(win))
 
-        fig, ax = plt.subplots(figsize=(10, 3))
-        ax.plot(x, win)
-        ax.set_xlabel("Sample index")
-        ax.set_ylabel("bpm")
-        st.pyplot(fig)
-        plt.close(fig)
+        # ----- HRV Features -----
+        try:
+            if hrv_df is None:
+                hrv_df = pd.read_csv(h0_csv)
 
-        st.markdown("**HRV Features Output**")
-        row = hrv_df.iloc[0]
-        cols1 = st.columns(5)
-        cols2 = st.columns(5)
-        for i in range(5):
-            cols1[i].metric(row.index[i], f"{row.values[i]:.3f}")
-            cols2[i].metric(row.index[i+5], f"{row.values[i+5]:.3f}")
+            st.markdown("**HRV Features Output**")
+
+            row = hrv_df.iloc[0]
+            feature_names = list(row.index)[:10]
+            feature_values = row.values[:10]
+
+            if len(feature_names) != 10:
+                st.warning(f"Expected 10 HRV features, got {len(feature_names)}")
+                
+
+            cols1 = st.columns(5)
+            for i in range(5):
+                with cols1[i]:
+                    st.metric(feature_names[i], f"{feature_values[i]:.3f}")
+
+            cols2 = st.columns(5)
+            for i in range(5, 10):
+                with cols2[i - 5]:
+                    st.metric(feature_names[i], f"{feature_values[i]:.3f}")
+
+        except Exception as e:
+            st.warning(f"Failed to render HRV features: {e}")
 
 else:
     st.info("Please enter Token and Observation URL to start calculation")
