@@ -209,54 +209,60 @@ if token and obs_url:
     # =========================================
     # ECG Input & HRV Features
     # =========================================
+
+        
     with ecg_hrv_placeholder.container():
         st.markdown("---")
         st.subheader("ECG Input & HRV Features")
-        
+    
         try:
+            # HR signal（確保為 1D float）
             hr = np.asarray(ecg_signal, dtype=float).ravel()
-        
+    
             n = len(hr)
-            x = np.arange(n)  # 每個點的順序
+            x = np.arange(n)
+    
+            # 指定要看的 index
             idx = 750
-            if 0 <= idx < len(hr):
+            if 0 <= idx < n:
                 st.write(f"HR at index {idx}: {hr[idx]:.2f} bpm")
-            fig = go.Figure()
-            fig.add_trace(
-                go.Scatter(
-                    x=x,
-                    y=hr,
-                    mode="lines",
-                    line=dict(width=1),
-                    name="HR (bpm)"
-                )
-            )
-        
-            # 👉 一開始只顯示 750–800
+    
+            # 👉 初始顯示區間
             start_idx = 750
             end_idx = 800
-            ymin, ymax = hr.min(), hr.max()
+            start_idx = max(0, start_idx)
+            end_idx = min(n, end_idx)
     
-            # 保險：避免完全平坦
+            hr_win = hr[start_idx:end_idx]
+            x_win = x[start_idx:end_idx]
+    
+            # y 軸範圍（避免平坦）
+            ymin, ymax = float(hr_win.min()), float(hr_win.max())
             if ymin == ymax:
                 ymin -= 1
                 ymax += 1
-            fig.update_layout(
-                title="Heart Rate (index-based view)",
-                xaxis_title="Sample index",
-                yaxis_title="bpm",
-                height=350,
-                margin=dict(l=40, r=20, t=50, b=40),
-                xaxis=dict(
-                    range=[start_idx, end_idx],   # ⭐ 初始顯示區間
-                    rangeslider=dict(visible=True),  # ⭐ 底下可拖動
-                    type="linear"
-                ),
-                yaxis=dict(autorange=True)
-            )
-        
-            st.plotly_chart(fig, use_container_width=True)
-        
+            pad = 0.05 * (ymax - ymin)
+    
+            # === matplotlib plot ===
+            fig, ax = plt.subplots(figsize=(10, 3))
+            ax.plot(x_win, hr_win, linewidth=1)
+    
+            ax.set_title("Heart Rate (index-based view)")
+            ax.set_xlabel("Sample index")
+            ax.set_ylabel("bpm")
+    
+            ax.set_xlim(start_idx, end_idx)
+            ax.set_ylim(ymin - pad, ymax + pad)
+    
+            # 標示 index 750
+            if start_idx <= idx <= end_idx:
+                ax.axvline(x=idx, linestyle="--", alpha=0.5)
+    
+            ax.grid(alpha=0.3)
+    
+            st.pyplot(fig)
+            plt.close(fig)
+    
         except Exception as e:
             st.warning(f"Failed to plot HR: {e}")
 
