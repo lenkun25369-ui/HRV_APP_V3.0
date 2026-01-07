@@ -296,7 +296,7 @@ if token and obs_url:
         try:
             hrv_df = st.session_state.hrv_df
 
-            st.markdown("**Generated HRV Features **")
+            st.markdown("**Generated HRV Features**")
 
             row = hrv_df.iloc[0]
             feature_names = list(row.index)[:10]
