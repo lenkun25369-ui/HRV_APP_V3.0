@@ -216,9 +216,13 @@ if token and obs_url:
         st.subheader("ECG Input & HRV Features")
     
         try:
-            # HR signal（確保為 1D float）
-            hr = np.asarray(ecg_signal, dtype=float).ravel()
+            # ============================
+            # 資料只準備一次（關鍵修改）
+            # ============================
+            if "hr_signal" not in st.session_state:
+                st.session_state.hr_signal = np.asarray(ecg_signal, dtype=float).ravel()
     
+            hr = st.session_state.hr_signal
             n = len(hr)
             x = np.arange(n)
     
@@ -227,8 +231,9 @@ if token and obs_url:
             if 0 <= idx < n:
                 st.write(f"HR at index {idx}: {hr[idx]:.2f} bpm")
     
-            # 👉 初始顯示區間
-            # 視窗起點控制
+            # ============================
+            # 視窗控制（只影響顯示）
+            # ============================
             start_idx = st.slider(
                 "View window start index",
                 min_value=0,
@@ -236,24 +241,28 @@ if token and obs_url:
                 value=750,
                 step=1
             )
-            
+    
             window_size = 50
             end_idx = start_idx + window_size
-
+    
             start_idx = max(0, start_idx)
             end_idx = min(n, end_idx)
     
             hr_win = hr[start_idx:end_idx]
             x_win = x[start_idx:end_idx]
     
-            # y 軸範圍（避免平坦）
+            # ============================
+            # y 軸範圍（顯示用）
+            # ============================
             ymin, ymax = float(hr_win.min()), float(hr_win.max())
             if ymin == ymax:
                 ymin -= 1
                 ymax += 1
             pad = 0.05 * (ymax - ymin)
     
-            # === matplotlib plot ===
+            # ============================
+            # matplotlib plot（只重畫）
+            # ============================
             fig, ax = plt.subplots(figsize=(10, 3))
             ax.plot(x_win, hr_win, linewidth=1)
     
@@ -275,6 +284,7 @@ if token and obs_url:
     
         except Exception as e:
             st.warning(f"Failed to plot HR: {e}")
+
 
 
 
