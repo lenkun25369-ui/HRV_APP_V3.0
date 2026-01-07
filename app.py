@@ -195,76 +195,77 @@ if token and obs_url:
         st.subheader("ECG Input & HRV Features")
 
         # ----- ECG Plot -----
+        try:
+       
+            ecg_df = pd.read_csv(ecg_csv, header=None)
+            ecg_signal = ecg_df.iloc[:, 0].values
 
-        ecg_df = pd.read_csv(ecg_csv, header=None)
-        ecg_signal = ecg_df.iloc[:, 0].values
+            # ⭐⭐⭐ 唯一修改在這一行 ⭐⭐⭐
+            ecg_signal = np.asarray(ecg_signal, dtype=float).ravel()  # CRITICAL FIX
 
-        # ⭐⭐⭐ 唯一修改在這一行 ⭐⭐⭐
-        ecg_signal = np.asarray(ecg_signal, dtype=float).ravel()  # CRITICAL FIX
+            stride = 5
+            ecg_ds = ecg_signal[::stride]
+            x_ds = np.arange(len(ecg_ds)) * stride
 
-        stride = 5
-        ecg_ds = ecg_signal[::stride]
-        x_ds = np.arange(len(ecg_ds)) * stride
-
-        fig = go.Figure()
-        fig.add_trace(
-            go.Scatter(
-                x=x_ds,
-                y=ecg_ds,
-                mode="lines",
-                line=dict(width=1),
-                name="ECG"
+            fig = go.Figure()
+            fig.add_trace(
+                go.Scatter(
+                    x=x_ds,
+                    y=ecg_ds,
+                    mode="lines",
+                    line=dict(width=1),
+                    name="ECG"
+                )
             )
-        )
 
-        init_end = min(len(x_ds) - 1, 2000)
+            init_end = min(len(x_ds) - 1, 2000)
 
-        fig.update_layout(
-            title="ECG Signal (Interactive)",
-            xaxis_title="Sample Index",
-            yaxis_title="Amplitude",
-            height=300,
-            margin=dict(l=40, r=20, t=50, b=40),
-            xaxis=dict(
-                range=[x_ds[0], x_ds[init_end]],
-                rangeslider=dict(visible=True),
-                type="linear"
-            ),
-            yaxis=dict(autorange=True)
-        )
+            fig.update_layout(
+                title="ECG Signal (Interactive)",
+                xaxis_title="Sample Index",
+                yaxis_title="Amplitude",
+                height=300,
+                margin=dict(l=40, r=20, t=50, b=40),
+                xaxis=dict(
+                    range=[x_ds[0], x_ds[init_end]],
+                    rangeslider=dict(visible=True),
+                    type="linear"
+                ),
+                yaxis=dict(autorange=True)
+            )
 
-        st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, use_container_width=True)
 
-    except Exception as e:
-        st.warning(f"Failed to plot ECG signal: {e}")
+        except Exception as e:
+            st.warning(f"Failed to plot ECG signal: {e}")
 
-    # ----- HRV Features -----
-    try:
-        if hrv_df is None:
-            hrv_df = pd.read_csv(h0_csv)
+        # ----- HRV Features -----
+        try:
+            if hrv_df is None:
+                hrv_df = pd.read_csv(h0_csv)
 
-        st.markdown("**HRV Features Output**")
+            st.markdown("**HRV Features Output**")
 
-        row = hrv_df.iloc[0]
-        feature_names = list(row.index)[:10]
-        feature_values = row.values[:10]
+            row = hrv_df.iloc[0]
+            feature_names = list(row.index)[:10]
+            feature_values = row.values[:10]
 
-        if len(feature_names) != 10:
-            st.warning(f"Expected 10 HRV features, got {len(feature_names)}")
-            
+            if len(feature_names) != 10:
+                st.warning(f"Expected 10 HRV features, got {len(feature_names)}")
+                
 
-        cols1 = st.columns(5)
-        for i in range(5):
-            with cols1[i]:
-                st.metric(feature_names[i], f"{feature_values[i]:.3f}")
+            cols1 = st.columns(5)
+            for i in range(5):
+                with cols1[i]:
+                    st.metric(feature_names[i], f"{feature_values[i]:.3f}")
 
-        cols2 = st.columns(5)
-        for i in range(5, 10):
-            with cols2[i - 5]:
-                st.metric(feature_names[i], f"{feature_values[i]:.3f}")
+            cols2 = st.columns(5)
+            for i in range(5, 10):
+                with cols2[i - 5]:
+                    st.metric(feature_names[i], f"{feature_values[i]:.3f}")
 
-    except Exception as e:
-        st.warning(f"Failed to render HRV features: {e}")
+        except Exception as e:
+            st.warning(f"Failed to render HRV features: {e}")
 
 else:
     st.info("Please enter Token and Observation URL to start calculation")
