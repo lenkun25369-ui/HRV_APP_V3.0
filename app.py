@@ -90,8 +90,24 @@ if token and obs_url:
             )
             if proc.returncode != 0:
                 raise RuntimeError(proc.stderr)
+            # ===== Robust ECG loading (REPLACE ORIGINAL 2 LINES) =====
+            if not os.path.exists(ecg_csv):
+                raise RuntimeError("ECG CSV not created by parse_fhir_ecg_to_csv.py")
+            
             ecg_df = pd.read_csv(ecg_csv, header=None)
-            ecg_signal = np.asarray(ecg_df.iloc[:, 0].values, dtype=float).ravel()
+            
+            # 防止非數值 / 空檔 / header 混入
+            ecg_signal = (
+                pd.to_numeric(ecg_df.iloc[:, 0], errors="coerce")
+                .dropna()
+                .to_numpy(dtype=float)
+                .ravel()
+            )
+            
+            if ecg_signal.size == 0:
+                raise RuntimeError("ECG signal is empty after parsing")
+            # =========================================================
+
             # try:
             #     ecg_signal = json.loads(proc.stdout.splitlines()[-1])
             # except Exception as e:
