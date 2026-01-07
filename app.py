@@ -212,42 +212,47 @@ if token and obs_url:
     with ecg_hrv_placeholder.container():
         st.markdown("---")
         st.subheader("ECG Input & HRV Features")
-
+        
         try:
             hr = np.asarray(ecg_signal, dtype=float).ravel()
         
-            st.write("HR stats:", float(hr.min()), float(hr.max()), float(hr.std()))
-        
-            x = np.arange(len(hr)) / 125.0  # 秒
-        
-            # 用 percentile 避免被 outlier 拉爆
-            ymin, ymax = np.percentile(hr, [1, 99])
-            if ymin == ymax:
-                ymin -= 1
-                ymax += 1
+            n = len(hr)
+            x = np.arange(n)  # 每個點的順序
         
             fig = go.Figure()
-            fig.add_trace(go.Scatter(x=x, y=hr, mode="lines", name="Heart Rate (bpm)"))
+            fig.add_trace(
+                go.Scatter(
+                    x=x,
+                    y=hr,
+                    mode="lines",
+                    line=dict(width=1),
+                    name="HR (bpm)"
+                )
+            )
         
-            init_end = min(len(x) - 1, 10 * 125)  # 預設先看 10 秒
+            # 👉 一開始只顯示 750–800
+            start_idx = 750
+            end_idx = 800
+        
             fig.update_layout(
-                title="Heart Rate Trend (125 Hz)",
-                xaxis_title="Time (s)",
+                title="Heart Rate (index-based view)",
+                xaxis_title="Sample index",
                 yaxis_title="bpm",
-                height=300,
+                height=350,
                 margin=dict(l=40, r=20, t=50, b=40),
                 xaxis=dict(
-                    range=[x[0], x[init_end]],
-                    rangeslider=dict(visible=True),
-                    type="linear",
+                    range=[start_idx, end_idx],   # ⭐ 初始顯示區間
+                    rangeslider=dict(visible=True),  # ⭐ 底下可拖動
+                    type="linear"
                 ),
-                yaxis=dict(range=[ymin, ymax]),
+                yaxis=dict(autorange=True)
             )
         
             st.plotly_chart(fig, use_container_width=True)
         
         except Exception as e:
-            st.warning(f"Failed to plot HR trend: {e}")
+            st.warning(f"Failed to plot HR: {e}")
+
 
 
         # ----- HRV Features -----
