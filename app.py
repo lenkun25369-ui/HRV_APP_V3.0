@@ -296,7 +296,7 @@ if token and obs_url:
         try:
             hrv_df = st.session_state.hrv_df
 
-            st.markdown("**Generated HRV Features**")
+            st.markdown("Generated HRV Features")
 
             row = hrv_df.iloc[0]
             feature_names = list(row.index)[:10]
@@ -311,6 +311,11 @@ if token and obs_url:
             for i in range(5, 10):
                 with cols2[i - 5]:
                     st.metric(feature_names[i], f"{feature_values[i]:.3f}")
+            st.markdown(
+                "🔗 Reference of Features: "
+                "[https://doi.org/10.1016/j.bspc.2024.106854]"
+                "(https://doi.org/10.1016/j.bspc.2024.106854)"
+            )
 
         except Exception as e:
             st.warning(f"Failed to render HRV features: {e}")
